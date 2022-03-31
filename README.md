@@ -10,9 +10,13 @@ Akka-Essentials
 ├─.idea
 ├─project
 ├─src
-│  └─main
+│  ├─main
+│  │  └─scala
+│  │      ├─part1recap
+│  │      ├─part2actors
+│  │      └─playground
+│  └─test
 │      └─scala
-│          └─playground
 └─target
 ```
 
