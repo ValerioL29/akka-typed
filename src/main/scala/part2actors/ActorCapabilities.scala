@@ -1,15 +1,13 @@
 package part2actors
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import part2actors.ActorCapabilities.BankAccount.Deposit
-import part2actors.ActorCapabilities.Person.LiveTheLife
 
 object ActorCapabilities extends App {
 
   class SimpleActor extends Actor {
     override def receive: Receive = {
       case "Hi" => context.sender() ! "Hello, there!" // replaying to a message
-      case message: String => println(s"[${self}] I have received $message")
+      case message: String => println(s"[$self] I have received $message")
       case number: Int => println(s"[simple actor] I have received a NUMBER: $number")
       case SpecialMessage(contents) => println(s"[simple actor] I have receive something SPECIAL: $contents")
       case SendMessageToYourself(content) => self ! content
@@ -162,6 +160,8 @@ object ActorCapabilities extends App {
       case TransactionFailure(reason) => println(s"$reason")
     }
   }
+
+  import Person._
 
   val account = system.actorOf(Props[BankAccount], "myAccount")
   val person = system.actorOf(Props[Person], "billionaire")
