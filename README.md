@@ -1,4 +1,4 @@
-# Akka-Essentials
+# Akka-Typed-Essentials
 
 #### Description
 🥳 Actors and Concurrency
