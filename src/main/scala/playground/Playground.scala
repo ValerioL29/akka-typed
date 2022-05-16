@@ -1,9 +1,24 @@
 package playground
 
-import akka.actor.ActorSystem
+import akka.actor.typed.ActorSystem
+import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 
-object Playground extends App {
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 
-  val actorSystem = ActorSystem("HelloAkka")
-  println(actorSystem.name)
+object Playground {
+  def main(args: Array[String]): Unit = {
+    val root: ActorSystem[String] = ActorSystem(
+      Behaviors.receive[String] { (context: ActorContext[String], message: String) =>
+        context.log.info(s"Just received: $message")
+        Behaviors.same
+      },
+      "DummySystem"
+    )
+
+    root ! "Hey, Akka!"
+
+    implicit val ec: ExecutionContext = root.executionContext
+    root.scheduler.scheduleOnce(3.seconds, () => root.terminate())
+  }
 }
