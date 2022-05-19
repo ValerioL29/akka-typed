@@ -53,6 +53,4 @@ object ActorsIntro extends App {
   // Using constructor: actorSystem.actorOf(Props(new Person("Bob")))
   val person = actorSystem.actorOf(Person.props("Bob"))
   person ! "hi"
-
-
 }
