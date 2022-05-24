@@ -1,7 +1,7 @@
 package part2actors
 
 import akka.NotUsed
-import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
+import akka.actor.typed.{ActorRef, ActorSystem, Behavior, Terminated}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 
 object TypedChildActors {
@@ -26,8 +26,12 @@ object TypedChildActors {
     trait Command
     case class CreateChild(name: String) extends Command
     case class TellChild(message: String) extends Command
+    case object StopChild extends Command
+    case object WatchChild extends Command
 
-    def apply(): Behavior[Command] = Behaviors.receive { (context: ActorContext[Command], message: Command) =>
+    def apply(): Behavior[Command] = idle()
+
+    def idle(): Behavior[Command] = Behaviors.receive { (context: ActorContext[Command], message: Command) =>
       message match {
         case CreateChild(name) =>
           context.log.info(s"[Parent] Creating child with name $name")
@@ -37,16 +41,28 @@ object TypedChildActors {
       }
     }
 
-    def active(childRef: ActorRef[String]): Behavior[Command] = Behaviors.receive { (context: ActorContext[Command], message: Command) =>
+    def active(childRef: ActorRef[String]): Behavior[Command] = Behaviors.receive[Command]{ (context: ActorContext[Command], message: Command) =>
       message match {
         case TellChild(message) =>
           context.log.info(s"[Parent] Sending message $message to child")
           childRef ! message // <- send a message to another actor
           Behaviors.same
+        case StopChild =>
+          context.log.info("[Parent] stopping child")
+          context.stop(childRef) // only works with CHILD actors
+          idle()
+        case WatchChild =>
+          context.log.info("[Parent] watching child")
+          context.watch(childRef) // can use any ActorRef, that is, we can watch actors in other actor system
+          Behaviors.same
         case _ =>
           context.log.info(s"[Parent] command not supported")
           Behaviors.same
       }
+    }.receiveSignal { // work with Watching mechanism
+      case (context, Terminated(childRefWhichDied)) =>
+        context.log.info(s"[Parent] Child ${childRefWhichDied.path} has been terminated by something...")
+        idle()
     }
   }
 
@@ -67,6 +83,10 @@ object TypedChildActors {
 
       parent ! CreateChild("child")
       parent ! TellChild("hey kid, you there?")
+      parent ! WatchChild
+      parent ! StopChild
+      parent ! CreateChild("child2")
+      parent ! TellChild("yo new kid, how are you?")
       // user guardian usually has no behavior of its own
       Behaviors.empty
     }
@@ -78,18 +98,16 @@ object TypedChildActors {
     system.terminate()
   }
 
-  /**
-   * Exercise: write a Parent_V2 that can manage MULTIPLE children
-   *
-   */
   object Parent_V2 {
     trait Command
     case class CreateChild(name: String) extends Command
     case class TellChild(name: String, message: String) extends Command
+    case class StopChild(name: String) extends Command
+    case class WatchChild(name: String) extends Command
 
     def apply(): Behavior[Command] = active(Map())
 
-    def active(children: Map[String, ActorRef[String]]): Behavior[Command] = Behaviors.receive { (context: ActorContext[Command], message: Command) =>
+    def active(children: Map[String, ActorRef[String]]): Behavior[Command] = Behaviors.receive[Command] { (context: ActorContext[Command], message: Command) =>
       message match {
         case CreateChild(name) =>
           context.log.info(s"[Parent] Creating child: $name")
@@ -99,7 +117,26 @@ object TypedChildActors {
           val childOption: Option[ActorRef[String]] = children.get(name)
           childOption.fold(context.log.info(s"[Parent] Child '$name' could not be found"))((child: ActorRef[String]) => child ! message)
           Behaviors.same
+        case StopChild(name) =>
+          context.log.info(s"[Parent] attempting to stop child with name $name")
+          val childOption: Option[ActorRef[String]] = children.get(name)
+          childOption.fold(
+            context.log.info(s"[Parent] Child $name could not be stopped: Name doesn't exit")
+          )(context.stop)
+          active(children - name)
+        case WatchChild(name) =>
+          context.log.info(s"[Parent] watching child with name $name")
+          val childOption: Option[ActorRef[String]] = children.get(name)
+          childOption.fold(
+            context.log.info(s"[Parent] Child $name could not be watched: Name doesn't exit")
+          )(context.watch)
+          Behaviors.same
       }
+    }.receiveSignal {
+      case (context, Terminated(ref)) =>
+        context.log.info(s"[Parent] Child ${ref.path} was killed.")
+        val childName: String = ref.path.name
+        active(children - childName)
     }
   }
 
@@ -111,6 +148,9 @@ object TypedChildActors {
       parent ! CreateChild("bob")
       parent ! TellChild("alice", "living next door to you")
       parent ! TellChild("ken", "I hope your Akka skills are good")
+      parent ! WatchChild("alice")
+      parent ! StopChild("alice")
+      parent ! TellChild("alice", "hey Alice, you still there?")
 
       Behaviors.empty
     }
