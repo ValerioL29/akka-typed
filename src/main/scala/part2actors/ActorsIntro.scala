@@ -1,56 +1,71 @@
 package part2actors
 
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.actor.typed.{ActorSystem, Behavior}
+import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 
-object ActorsIntro extends App {
+object ActorsIntro {
 
-  // part1 - actor systems
-  val actorSystem = ActorSystem("firstActorSystem") // Name can't have spaces
-  println(actorSystem.name)
+  // part 1: behavior
+  val simpleActorBehavior: Behavior[String] = Behaviors.receiveMessage { (message: String) => // Behavior[String]
+    // do something with the message
+    println(s"[simple actor] I have received: $message")
 
-  // part2 - create actors
-  /**
-   * Actor principles -
-   *
-   * 1. Actors are uniquely identifies
-   * 2. Messages are asynchronous
-   * 3. Each actor may respond differently
-   * 4. Actors are REALLY encapsulated
-   */
-  // word count actor
-  class WordCountActor extends Actor {
-    // internal data
-    var totalWords = 0
+    // new behavior for the NEXT message
+    Behaviors.same
+  }
 
-    // behavior
-    override def receive: Receive = {
-      case message: String =>
-        println(s"[word counter] I have received: ${message}")
-        totalWords = message.split(" ").length
-      case msg => println(s"[word counter] I cannot understand ${msg.toString}")
+  def demoSimpleActor(): Unit = {
+    // part 2: instantiate
+    val actorSystem: ActorSystem[String] = ActorSystem(SimpleActor_V2(), "FirstActorSystem")
+
+    // part 3: communicate!
+    actorSystem ! "I am learning Akka" // asynchronously send a message
+    // ! is the "tell" method
+    // actorSystem ! 43 This is banned! Because we have specified the Behavior type is STRING!!!
+
+    // part 4: gracefully shut down
+    Thread.sleep(1000)
+    actorSystem.terminate()
+  }
+
+  // "refactor" behavior definition
+  // Similar to our OOP pattern
+  object SimpleActor {
+    def apply(): Behavior[String] = Behaviors.receiveMessage { (message: String) => // Behavior[String]
+      // do something with the message
+      println(s"[simple actor] I have received: $message")
+
+      // new behavior for the NEXT message
+      Behaviors.same
     }
   }
 
-  // part3 - instantiate our actor
-  val wordCounter: ActorRef = actorSystem.actorOf(Props[WordCountActor], "wordCounter") // Actor name has to be unique!
-  val anotherWordCounter: ActorRef = actorSystem.actorOf(Props[WordCountActor], "anotherWordCounter")
+  object SimpleActor_V2 {
+    def apply(): Behavior[String] = Behaviors.receive{ (context: ActorContext[String], message: String) =>
+      // context is the ActorContext
+      // context is a data structure (ActorContext) with access to a variety of APIs
+      // simple example: logging
+      context.log.info(s"[simple actor] I have received: $message")
 
-  // part4 - communicate!
-  wordCounter ! "I am learning Akka and it's pretty damn cool!" // explanation, that is, the "tell"
-  anotherWordCounter ! "A different message"
-  // asynchronous!
-
-  object Person { // Best practice to form an Actor with constructor!
-    def props(name: String) = Props(new Person(name))
-  }
-  class Person(name: String) extends Actor {
-    override def receive: Receive = {
-      case "hi" => println(s"[person] Hi, my name is ${name}")
-      case _ =>
+      // new behavior for the NEXT message
+      Behaviors.same
     }
   }
 
-  // Using constructor: actorSystem.actorOf(Props(new Person("Bob")))
-  val person = actorSystem.actorOf(Person.props("Bob"))
-  person ! "hi"
+  object SimpleActor_V3 {
+    def apply(): Behavior[String] = Behaviors.setup{ context: ActorContext[String] =>
+      // actor "private" data and methods, behaviors etc
+      // YOUR CODE HERE
+
+      // Returns the behavior when the actor received the first message
+      Behaviors.receiveMessage { message: String =>
+        context.log.info(s"[simple actor] I have received: $message")
+        Behaviors.same
+      }
+    }
+  }
+
+  def main(args: Array[String]): Unit = {
+    demoSimpleActor()
+  }
 }
