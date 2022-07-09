@@ -1,0 +1,6 @@
+{
+  "aJsonProperty": "elapsed",
+  "akka": {
+    "loglevel": "DEBUG"
+  }
+}
