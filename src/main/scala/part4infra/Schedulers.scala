@@ -102,8 +102,7 @@ object Schedulers {
     }
 
     import utils._
-    val system: ActorSystem[NotUsed] =
-      ActorSystem(userGuardian, "demoResettingTimeoutActor").withFiniteLifespan(3 seconds)
+    ActorSystem(userGuardian, "demoResettingTimeoutActor").withFiniteLifespan(3 seconds)
   }
 
   def main(args: Array[String]): Unit = {
