@@ -1,7 +1,5 @@
 package part1recap
 
-import com.sun.org.apache.xpath.internal.functions.FuncTrue
-
 import scala.concurrent.Future
 
 /**
@@ -105,12 +103,12 @@ object ThreadModelLimitations extends App {
   // Assume that we are smart enough to use Future
   import scala.concurrent.ExecutionContext.Implicits.global
   val futures = (1 to 10)
-    .map(i => 100000 * i until 100000 * (i + 1))
-    .map(range => Future {
+    .map((i: Int) => 100000 * i until 100000 * (i + 1))
+    .map((range: Range) => Future {
       if(range.contains(546735)) throw new RuntimeException("invalid number")
       range.sum
     })
 
-  val sumFuture = Future.reduceLeft(futures)(_ + _)
+  val sumFuture = Future.reduceLeft(futures)((_: Int) + (_: Int))
   sumFuture.onComplete(println)
 }

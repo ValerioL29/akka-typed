@@ -66,12 +66,14 @@ object AskPattern {
       context.ask(worker, (ref: ActorRef[WorkProtocol]) => ComputationalTask(
         "This ask pattern seems quite complicated", ref
       )) {
-            // Try[WorkProtocol] => WorkProtocol message that will be sent to ME LATER
-            case Success(ComputationalResult(count)) =>
-              ExtendedComputationalResult(count, "This is pretty damn hard")
-            case Failure(ex) =>
-              ExtendedComputationalResult(-1, s"Computation failed: ${ex.getMessage}")
-          }
+        // Try[WorkProtocol] => WorkProtocol message that will be sent to ME LATER
+        case Success(ComputationalResult(count)) =>
+          ExtendedComputationalResult(count, "This is pretty damn hard")
+        case Success(otherReply) =>
+          ExtendedComputationalResult(-1, s"Computation finished with unexpected reply: $otherReply")
+        case Failure(ex) =>
+          ExtendedComputationalResult(-1, s"Computation failed: ${ex.getMessage}")
+      }
 
       // 3 - handle the results (messages) from the ask pattern
       Behaviors.receiveMessage[WorkProtocol] {

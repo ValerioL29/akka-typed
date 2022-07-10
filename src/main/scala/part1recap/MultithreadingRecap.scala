@@ -13,8 +13,8 @@ object MultithreadingRecap extends App {
   aThread.join()
 
   // Thread is unpredictable :(
-  val threadHello = new Thread(() => (1 to 1000).foreach(_ => println("hello")))
-  val threadGoodbye = new Thread(() => (1 to 1000).foreach(_ => println("goodbye")))
+  val threadHello = new Thread(() => (1 to 1000).foreach((_: Int) => println("hello")))
+  val threadGoodbye = new Thread(() => (1 to 1000).foreach((_: Int) => println("goodbye")))
 
   threadHello.start()
   threadGoodbye.start()
@@ -56,17 +56,21 @@ object MultithreadingRecap extends App {
   }
 
   // Callbacks
-  future.onComplete{
-    case Success(42) => println("I found the meaning of life")
-    case Failure(exception) => println("something happened with the meaning of life!")
+  future.onComplete {
+    case Success(42) =>
+      println("I found the meaning of life")
+    case Success(otherResult) =>
+      println(s"Unexpected results: $otherResult")
+    case Failure(exception) =>
+      println(s"something happened with the meaning of life with reason: ${exception.getMessage}!")
   }
 
-  val aProcessedFuture = future.map(_ + 1) // Future with 43
-  val aFlatFuture = future.flatMap{ value =>
+  val aProcessedFuture = future.map((_: Int) + 1) // Future with 43
+  val aFlatFuture = future.flatMap{ value: Int =>
     Future(value + 1)
   } // Future with 44
 
-  val filteredFuture = future.filter(_ % 2 == 0) // NoSuchElementException
+  val filteredFuture = future.filter((_: Int) % 2 == 0) // NoSuchElementException
 
   // For comprehensions
   val aNonsenseFuture = for {
